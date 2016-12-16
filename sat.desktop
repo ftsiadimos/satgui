@@ -1,0 +1,11 @@
+[Desktop Entry]
+Comment=Satellite Monitoring Tool
+Terminal=false
+Name=Satellite
+Exec=/usr/lib/python2.7/site-packages/satgui/satgui.py
+Type=Application
+Icon=sat
+Categories=GNOME;GTK;System;Profiling;
+Keywords=sosreport;logs;
+X-Desktop-File-Install-Version=0.22
+
