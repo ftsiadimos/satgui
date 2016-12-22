@@ -17,7 +17,8 @@ import subprocess
 columns = ["Label",
            "Result",
            "State",
-           "Started_at"]
+           "Started_at",
+           "Ended_at"]
 
 class satmonitor(Gtk.Window):
 
@@ -25,7 +26,7 @@ class satmonitor(Gtk.Window):
         Gtk.Window.__init__(self, title="Satellite-Task-Monitor")
         self.set_border_width(10)
         self.set_resizable(False)
-        self.set_default_size(500,630)
+        self.set_default_size(600,630)
         self.grid = Gtk.Grid()
         self.grid.set_row_spacing(15)
 
@@ -62,9 +63,9 @@ class satmonitor(Gtk.Window):
         button.connect("clicked", self.on_close_clicked)
         self.grid.attach(button, 3, 2, 1, 1)
 
-
-        self.listmodel = Gtk.ListStore(str, str, str, str)
+        self.listmodel = Gtk.ListStore(str, str, str, str, str)
         self.view = Gtk.TreeView(model=self.listmodel)
+        self.view.set_can_default(False)
         for i in range(len(columns)):
                cell = Gtk.CellRendererText()
                if i == 0:
@@ -76,58 +77,27 @@ class satmonitor(Gtk.Window):
         self.grid.attach(self.view, 1, 4, 3, 1)
         self.cur_view = []
 
-        self.selection = self.view.get_selection()
-        self.selection.connect("changed", self.on_changed)
-
 
         ### show on gui
         self.add(self.grid)
-        self.j = 0
-        self.running = True
     def autore(self):
-
-        def update():
-              try:
-                systemsresult = urllib2.urlopen(self.systemsreq, context=self.ctx)
-                mysystems = systemsresult.read()
-                parsedsystems = json.loads(mysystems)
-                mysystems = (parsedsystems['results'])
-                self.rows = []
-                for system in mysystems:
-                  te = (system['label'], system['result'], system['state'], system['started_at'])
-                  self.rows.append(te)
-
-              #self.listmodel.clear()
-                a = 0
-                if len(self.cur_view):
-                  for i in self.listmodel:
-                     a += 1
-                  a -= 1
-                  for i in self.rows:
-                    if i not in self.cur_view:
-                      #a -=  1
-                      path = Gtk.TreePath(a)
+                try:
+                  self.call_api()
+                except:
+                 pass
+                for i in self.rowsm:
+                  if i not in self.cur_view:
+                    self.listmodel.append(i)
+                    self.cur_view.append(i)
+                    if i[1] == "error":
+                          self.sendmessage("Error task " + i[0])
+                    if len(self.listmodel) > 20:
+                      path = Gtk.TreePath(0)
                       treeiter = self.listmodel.get_iter(path)
                       self.listmodel.remove(treeiter)
-                      if i[1]  == "pending":
-                          self.sendmessage("Pending task: " + i[0])
-                      elif i[1] == "error":
-                          self.sendmessage("Nooooo you have an error task " + i[0])
-                      a -= 1
-                self.rows.reverse()
-                for i in self.rows:
-                  if i not in self.cur_view:
-                    self.listmodel.prepend(self.rows[self.j])
-                    self.cur_view.append(self.rows[self.j])
-                  self.j += 1
-                self.j = 0
-              except:
-                self.label4.set_label("Wrong URL/USR/PASS!")
-                self.running =  False
-        while self.running:
-                GObject.idle_add(update)
-                time.sleep(6)
-
+                  if  len(self.cur_view) > 50:
+                       del self.cur_view[0]
+                GObject.timeout_add(900, self.autore)
 
     def login(self, button):
 
@@ -146,12 +116,13 @@ class satmonitor(Gtk.Window):
            self.systemsreq = urllib2.Request(systemsurl)
            systemsbase64string = base64.encodestring('%s:%s' % (username, password)).replace('\n', '')
            self.systemsreq.add_header("Authorization", "Basic %s" % systemsbase64string)
-        except ValueError:
-            self.label4.set_label("Wrong URL/USR/PASS!")
+           systemsresult = urllib2.urlopen(self.systemsreq, context=self.ctx)
+           self.th = threading.Thread(target=self.autore)
+           self.th.daemon = True
+           self.th.start()
+        except:
+            self.label4.set_label("Not Connected!")
 
-        self.th = threading.Thread(target=self.autore)
-        self.th.daemon = True
-        self.th.start()
  
     def call_api(self):
         systemsresult = urllib2.urlopen(self.systemsreq, context=self.ctx)
@@ -159,22 +130,22 @@ class satmonitor(Gtk.Window):
         parsedsystems = json.loads(mysystems)
         mysystems = (parsedsystems['results'])
         self.rows = []
+        self.rowsm = []
         for system in mysystems:
-           te = (system['username'], system['label'], system['result'], system['state'], system['started_at'], system['ended_at'])
+           te = (system['label'], system['result'], system['state'], system['started_at'], system['ended_at'])
            self.rows.append(te)
-        return self.rows
-
-    def on_changed(self, selection):
-        self.call_api()
-        (model, iter) = self.selection.get_selected()
-        text = (model[iter][3])
-        dialog = Gtk.MessageDialog(self, 0, Gtk.MessageType.INFO,
-        Gtk.ButtonsType.OK, "TASK INFO ")
         for i in self.rows:
-	    if text in i: 
-        	dialog.format_secondary_text( format(i).replace("u'",  ' ').replace("'", ' ').replace('(', ' ').replace(')', ' '))
-        dialog.run()
-        dialog.destroy()
+            i = list(i)
+            label = i[0]
+            start_time = i[3]
+            end_time = i[4]
+            i[3] = start_time.replace(".000Z", '')
+            if i[4]:       
+                i[4] = end_time.replace(".000Z", '')       
+            i[0] = label.lstrip("Actions::Katello::")
+            self.rowsm.append(i)
+        return self.rowsm
+
 
     def on_close_clicked(self, button):
         Gtk.main_quit()
