@@ -143,7 +143,8 @@ class satmonitor(Gtk.Window):
             if i[4]:       
                 i[4] = end_time.replace(".000Z", '')       
             i[0] = label.lstrip("Actions::Katello::")
-            self.rowsm.append(i)
+            self.rowsm.insert(0, i)
+            
         return self.rowsm
 
 
