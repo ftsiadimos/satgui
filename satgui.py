@@ -48,6 +48,7 @@ class satmonitor(Gtk.Window):
         self.grid.attach(self.name_box2, 2, 1, 1, 1)
         self.name_box3 = Gtk.Entry()
         self.name_box3.set_visibility(False)
+	self.name_box3.connect("key-release-event", self.on_key_event)
         self.grid.attach(self.name_box3, 3, 1, 1, 1)
         ### insert button
 
@@ -80,6 +81,9 @@ class satmonitor(Gtk.Window):
 
         ### show on gui
         self.add(self.grid)
+    def on_key_event(self, widget, ev, data=None):
+	    if ev.keyval == 65293: 
+		self.login(True)
     def autore(self):
                 try:
                   self.call_api()
@@ -106,7 +110,6 @@ class satmonitor(Gtk.Window):
         url = self.name_box1.get_text()
         username = self.name_box2.get_text()
         password = self.name_box3.get_text()
-
         self.ctx = ssl.create_default_context()
         self.ctx.check_hostname = False
         self.ctx.verify_mode = ssl.CERT_NONE
@@ -117,6 +120,10 @@ class satmonitor(Gtk.Window):
            systemsbase64string = base64.encodestring('%s:%s' % (username, password)).replace('\n', '')
            self.systemsreq.add_header("Authorization", "Basic %s" % systemsbase64string)
            systemsresult = urllib2.urlopen(self.systemsreq, context=self.ctx)
+           self.name_box1.set_editable(False)
+           self.name_box2.set_editable(False)
+           self.name_box3.set_editable(False)
+           self.button.set_sensitive(False)				
            self.th = threading.Thread(target=self.autore)
            self.th.daemon = True
            self.th.start()
