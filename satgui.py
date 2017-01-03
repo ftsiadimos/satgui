@@ -12,7 +12,7 @@ from gi.repository import Gtk, Gdk, GObject
 import threading
 import time
 import subprocess
-
+from datetime import datetime
 
 columns = ["Label",
            "Result",
@@ -81,6 +81,8 @@ class satmonitor(Gtk.Window):
 
         ### show on gui
         self.add(self.grid)
+	i = datetime.now()
+	self.error_time = i.strftime('%Y-%m-%dT%H:%M:%S')
     def on_key_event(self, widget, ev, data=None):
 	    if ev.keyval == 65293: 
 		self.login(True)
@@ -93,7 +95,8 @@ class satmonitor(Gtk.Window):
                   if i not in self.cur_view:
                     self.listmodel.append(i)
                     self.cur_view.append(i)
-                    if i[1] == "error":
+                    if i[1] == "error" and self.error_time < i[3]:
+			  print i[3]
                           self.sendmessage("Error task " + i[0])
                     if len(self.listmodel) > 20:
                       path = Gtk.TreePath(0)
