@@ -96,7 +96,6 @@ class satmonitor(Gtk.Window):
                     self.listmodel.append(i)
                     self.cur_view.append(i)
                     if i[1] == "error" and self.error_time < i[3]:
-			  print i[3]
                           self.sendmessage("Error task " + i[0])
                     if len(self.listmodel) > 20:
                       path = Gtk.TreePath(0)
